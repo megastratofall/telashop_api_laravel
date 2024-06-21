@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\Cart;
 
 class CartController extends Controller
 {
@@ -20,9 +21,15 @@ class CartController extends Controller
         ]);
 
         $product = Product::findOrFail($request->product_id);
-        $user->cart()->attach($product->id, ['quantity' => $request->quantity]);
 
-        return response()->json(['message' => 'Producto agregado al carrito correctamente'], 201);
+        // Crear una nueva entrada en el carrito
+        $cartItem = Cart::create([
+            'user_id' => $user->id,
+            'product_id' => $product->id,
+            'quantity' => $request->quantity,
+        ]);
+
+        return response()->json(['message' => 'Producto agregado al carrito correctamente', 'cart_item' => $cartItem], 201);
     }
 
     public function updateCart(Request $request)
@@ -37,9 +44,14 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
-        $user->cart()->updateExistingPivot($request->product_id, ['quantity' => $request->quantity]);
+        // Buscar el producto en el carrito del usuario y actualizar la cantidad
+        $cartItem = Cart::where('user_id', $user->id)
+                        ->where('product_id', $request->product_id)
+                        ->firstOrFail();
 
-        return response()->json(['message' => 'Cantidad actualizada correctamente'], 200);
+        $cartItem->update(['quantity' => $request->quantity]);
+
+        return response()->json(['message' => 'Cantidad actualizada correctamente', 'cart_item' => $cartItem], 200);
     }
 
     public function removeFromCart(Request $request)
@@ -53,7 +65,10 @@ class CartController extends Controller
             'product_id' => 'required|exists:products,id',
         ]);
 
-        $user->cart()->detach($request->product_id);
+        // Eliminar el producto del carrito del usuario
+        Cart::where('user_id', $user->id)
+            ->where('product_id', $request->product_id)
+            ->delete();
 
         return response()->json(['message' => 'Producto eliminado del carrito correctamente'], 200);
     }
@@ -65,7 +80,12 @@ class CartController extends Controller
             return response()->json(['error' => 'Usuario no autenticado'], 401);
         }
 
-        $cart = $user->cart;
+        // Obtener todos los productos en el carrito del usuario con sus detalles
+        $cart = Cart::where('user_id', $user->id)
+                    ->with(['product:id,name,price']) // Incluir solo los campos necesarios del producto
+                    ->get();
+
         return response()->json($cart, 200);
     }
+
 }
