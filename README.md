@@ -12,3 +12,4 @@
 ![Prueba de funcionamiento](images/9.jpg)
 ![Prueba de funcionamiento](images/10.jpg)
 ![Prueba de funcionamiento](images/11.jpg)
+![Prueba de funcionamiento](images/12.jpg)
