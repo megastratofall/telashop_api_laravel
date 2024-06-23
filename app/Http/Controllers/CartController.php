@@ -17,7 +17,6 @@ class CartController extends Controller
 
         $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
         ]);
 
         $product = Product::findOrFail($request->product_id);
@@ -26,32 +25,9 @@ class CartController extends Controller
         $cartItem = Cart::create([
             'user_id' => $user->id,
             'product_id' => $product->id,
-            'quantity' => $request->quantity,
         ]);
 
         return response()->json(['message' => 'Producto agregado al carrito correctamente', 'cart_item' => $cartItem], 201);
-    }
-
-    public function updateCart(Request $request)
-    {
-        $user = $request->user();
-        if (!$user) {
-            return response()->json(['error' => 'Usuario no autenticado'], 401);
-        }
-
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-        ]);
-
-        // Buscar el producto en el carrito del usuario y actualizar la cantidad
-        $cartItem = Cart::where('user_id', $user->id)
-                        ->where('product_id', $request->product_id)
-                        ->firstOrFail();
-
-        $cartItem->update(['quantity' => $request->quantity]);
-
-        return response()->json(['message' => 'Cantidad actualizada correctamente', 'cart_item' => $cartItem], 200);
     }
 
     public function removeFromCart(Request $request)
@@ -62,12 +38,12 @@ class CartController extends Controller
         }
 
         $request->validate([
-            'product_id' => 'required|exists:products,id',
+            'cart_item_id' => 'required|exists:carts,id',
         ]);
 
-        // Eliminar el producto del carrito del usuario
+        // Eliminar el producto específico del carrito del usuario
         Cart::where('user_id', $user->id)
-            ->where('product_id', $request->product_id)
+            ->where('id', $request->cart_item_id)
             ->delete();
 
         return response()->json(['message' => 'Producto eliminado del carrito correctamente'], 200);
@@ -82,10 +58,9 @@ class CartController extends Controller
 
         // Obtener todos los productos en el carrito del usuario con sus detalles
         $cart = Cart::where('user_id', $user->id)
-                    ->with(['product:id,name,price']) // Incluir solo los campos necesarios del producto
+                    ->with(['product:id,name,price'])
                     ->get();
 
         return response()->json($cart, 200);
     }
-
 }
